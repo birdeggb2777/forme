@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圖片字數計算</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            background-color: #f0f0f0;
+        }
+
+        #picture {
+            max-width: 100%;
+            max-height: calc(100vh - 60px);
+            object-fit: contain;
+            border: 1px solid #ccc;
+            background-color: white;
+        }
+
+        button {
+            background: white;
+            width: 120px;
+            height: 40px;
+            font-size: 12pt;
+        }
+    </style>
+</head>
+
+<body>
+    請按開啟檔案來開啟圖片、或是按ctrl+v，貼上圖片<br>然後按「計算字數」按鈕進行計算。<br>
+    <button id="openFileBtn">開啟圖片</button>&ensp;&ensp;
+    <button id="countWordsBtn">計算字數</button><br>
+    <canvas id="picture"></canvas>
+
+    <script src="./script/NumOfWords.js"></script>
+</body>
+
+</html>
