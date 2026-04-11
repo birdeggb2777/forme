@@ -16,7 +16,7 @@ window.onload = function () {
         var data = ctx.getImageData(0, 0, img.width, img.height).data;
         onPasteImage();
     };
-    img.src = "./舊版圖片/測試000002.png";
+    img.src = "./舊版範例圖片/測試000002.png";
 }
 
 getById("countWordsBtn").onclick = function () {
