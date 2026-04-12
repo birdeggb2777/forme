@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-Hans-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google" content="notranslate">
+    <title>指令產生器</title>
+    <style>
+        select {
+            width: 115px;
+            height: 30px;
+            padding: 3px;
+            font-size: 1.2rem;
+        }
+
+        label {
+            line-height: 2;
+            font-size: 14pt;
+        }
+
+        code {
+            background-color: #f5f5f5;
+            color: #34353b;
+            padding: 2px 6px;
+            font-family: Consolas, Monaco, "Courier New", monospace;
+            font-size: 14pt;
+            border-radius: 3px;
+            border: 1px solid #3d3c3c;
+            margin-right: 8px;
+        }
+
+        .redCode {
+            background-color: #ffe7e7;
+            color: #000;
+        }
+
+        .粗線 {
+            border: 3px solid black;
+        }
+
+        redText {
+            color: #b81818;
+        }
+
+        div {
+            display: flex;
+            align-items: center;
+            border-radius: 8px;
+            border: 1px solid #3d3c3c;
+            /*width: fit-content;*/
+            padding: 2px 5px;
+            justify-content: center;
+            align-items: center;
+            height: 30px;
+            user-select: none;
+        }
+
+        div:hover {
+            filter: brightness(105%);
+        }
+
+        th {
+            width: 16%;
+        }
+    </style>
+</head>
+
+<body>
+    <label>選擇目標：</label>
+    <select id="app" name="app">
+        <option value="Chrome">Chrome</option>
+        <option value="Conda" selected>Conda</option>
+        <option value="DCMTK">DCMTK</option>
+        <option value="Docker">Docker</option>
+        <option value="FFmpeg">FFmpeg</option>
+        <option value="7z">7z</option>
+    </select>
+    <br>
+    <table style="width: 100%">
+        <tr>
+            <th scope="col">
+                <div style="background:#fffde7"><img width="25" src="./img/chrome.png">Chrome</div>
+            </th>
+            <th scope="col">
+                <div style="background:#ebffe7"><img width="25" src="./img/conda.png">Conda</div>
+            </th>
+            <th scope="col">
+                <div style="background:#e2ecee"><img width="25" src="./img/dcmtk.png">DCMTK</div>
+            </th>
+            <th scope="col">
+                <div style="background:#e7f0ff"><img width="25" src="./img/docker.png">Docker</div>
+            </th>
+            <th scope="col">
+                <div style="background:#d2f7d2"><img width="25" src="./img/ffmpeg.png">FFmpeg</div>
+            </th>
+            <th scope="col">
+                <div style="background:#e4e4de"><img width="25" src="./img/7z.png">7z</div>
+            </th>
+        </tr>
+    </table>
+    <br>
+    <hr>
+    <label id="result">參考指令：</label>
+    <script>
+        var getById = function (id) { return document.getElementById(id) };
+        var app = getById("app"), result = getById("result");
+        app.onchange = function () {
+            result.innerHTML = "參考指令：<br>"
+            if (this.value == "Chrome") {
+                result.innerHTML += `關閉CORS：<code>"C:/Program Files/Google/Chrome/Application/chrome.exe" --user-data-dir="C:/chrome_dev_test" --disable-web-security</code><br>`;
+            }
+            else if (this.value == "FFmpeg") {
+                result.innerHTML += `無失真切割：<code>ffmpeg -i input.mp4 -ss 00:01:00 -to 00:01:30 -c copy output.mp4</code><br>`;
+                result.innerHTML += `提取原始音訊：<code>ffmpeg -i input.mp4 -vn -acodec copy output.m4a</code><br>`;
+            }
+            else if (this.value == "Docker") {
+                result.innerHTML += `列出映像檔：<code>docker image ls</code><br>`;
+                result.innerHTML += `列出執行中的容器：<code>docker ps</code><code>docker container ls</code><br>`;
+                result.innerHTML += `列出所有容器：<code>docker ps -a</code><code>docker container ls -a</code><br>`;
+                result.innerHTML += `進入已經開啟的容器：<code>docker exec -it <容器ID或名稱></code><br>`;
+                result.innerHTML += `重新啟動已關閉容器：<code>docker start -ai <容器ID或名稱></code><br>`;
+                result.innerHTML += `指定容器名稱、以 GPU 啟動、掛載、port轉址、直接進入bash介面：<br><code>docker run --name <容器名稱> --gpus all -v <主機路徑>:<容器路徑> -p <主機Port>:<容器Port> -it <映像檔名稱> /bin/bash</code><br>`;
+                result.innerHTML += `<hr>`;
+                result.innerHTML += `<redText>刪除容器：</redText><code class="redCode">docker rm <容器ID或名稱></code><br>`;
+                result.innerHTML += `<redText>刪除映像檔：</redText><code class="redCode">docker rmi <映像檔ID或名稱></code><br>`;
+            }
+            else if (this.value == "Conda") {
+                result.innerHTML += `列出所有環境：<code>conda env list</code><br>`;
+                result.innerHTML += `啟動指定環境：<code>conda activate envname</code><br>`;
+                result.innerHTML += `匯出目前環境：<code>conda env export > env.yml</code><br>`;
+                result.innerHTML += `匯出目前環境且排除系統相依路徑：<code>conda env export --no-builds > env.yml</code><br>`;
+                result.innerHTML += `匯入指定環境：<code>conda env create -f env.yml</code><br>`;
+                result.innerHTML += `匯入指定環境且指定名稱：<code>conda env create -f env.yml -n <名稱></code><br>`;
+                result.innerHTML += `<hr>`;
+                result.innerHTML += `<redText>刪除指定環境：</redText><code class="redCode">conda remove -n <環境名稱> --all</code><br>`;
+            }
+            else if (this.value == "7z") {
+                result.innerHTML += `解壓縮到指定資料夾：<code>7z x file.7z -o ./target_folder</code><br>`;
+                result.innerHTML += `壓縮整個目標資料夾：<code>7z a backup.7z ./folder</code><br>`;
+                result.innerHTML += `極致壓縮整個目標資料夾 (mmt是執行續數量，不影響結果)：<br><code>7z a -t7z -mx=9 -mmt=8 -m0=lzma2 -md=128m -mfb=256 -ms=on output_file.7z ./folder</code><br>`;
+            }
+            else if (this.value == "DCMTK") {
+                result.innerHTML += `查看完整標籤：<code>dcmdump file.dcm</code><br>`;
+                result.innerHTML += `查看指定標籤：<code>dcmdump +P "PatientName" file.dcm</code><br>`;
+                result.innerHTML += `修改指定標籤：<code>dcmodify -m "PatientName=John^Doe" file.dcm</code><br>`;
+                result.innerHTML += `移除指定標籤：<code>dcmodify -e PatientName file.dcm</code><br>`;
+                result.innerHTML += `輸出為一般圖片：<code>dcmj2pnm +oj file.dcm file.jpg</code><br>`;
+                result.innerHTML += `把壓縮的影像解壓縮：<code>dcmconv +un image_compressed.dcm image_raw.dcm</code><br>`;
+                result.innerHTML += `把XML檔轉為DCM檔：<code>xml2dcm input.xml output.dcm</code><br>`;
+                result.innerHTML += `把DCM檔轉為XML檔：<code>dcm2xml input.dcm output.xml</code><br>`;
+                result.innerHTML += `把DCM檔轉為XML檔，且包含像素等龐大資料：<code>dcm2xml +M input.dcm output.xml</code><br>`;
+                result.innerHTML += `把DCM檔轉為XML檔，且轉換成UTF-8(包含中文的情況)：<code>dcm2xml --convert-to-utf8 input.dcm output.xml</code><br>`;
+            }
+            // 註冊剪貼簿
+            for (const code of document.querySelectorAll("code")) {
+                code.onclick = function () {
+                    const text = code.innerText;
+                    if (text.includes("(≧﹏≦)")) return; // 防止複製到提醒字串
+                    navigator.clipboard.writeText(text).then(() => {
+                        code.innerText = "✅ 已幫您複製到剪貼簿 (≧﹏≦)";
+                        setTimeout(() => { code.innerText = text; }, 1000);
+                    });
+                }
+            }
+            // 註冊按鈕樣式
+            for (const div of document.querySelectorAll("div")) {
+                if (app.value == div.innerText) div.className = "粗線";
+                else div.className = "";
+            }
+        }
+        app.onchange();
+        // 註冊按鈕事件
+        for (const div of document.querySelectorAll("div")) {
+            div.onclick = function () {
+                app.value = div.innerText;
+                app.onchange();
+            }
+        }
+    </script>
+</body>
+
+</html>
