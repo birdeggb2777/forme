@@ -53,7 +53,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             //取得視窗長寬
             RECT rect;
             int Window_Width = 1, Window_Height = 1;
-            if (GetWindowRect(hwnd, &rect)) {
+            if (GetClientRect(hwnd, &rect)) {
                 Window_Width = rect.right - rect.left; Window_Height = rect.bottom - rect.top;
             }
 
@@ -120,4 +120,3 @@ void setWindow(window* window_, HINSTANCE hInstance, wcharPtr title, int width, 
         return;
     }
 }
-
