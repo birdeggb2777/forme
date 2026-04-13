@@ -50,14 +50,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     string title;
     apply(&title, getFileName(__argv[1]));
 
+    // 建立視窗
     window* window_ = createWindow(hInstance);
     setWindow(window_,hInstance, title.val, 500, 300);
 
-    // 3. 顯示視窗
+    // 顯示視窗
     ShowWindow(window_->hwnd, SW_MAXIMIZE);
     UpdateWindow(window_->hwnd);
+    SetCursor(LoadCursor(NULL, IDC_ARROW));
 
-    // 4. 訊息迴圈
+    // 訊息迴圈
     MSG msg = {0};
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg); // 翻譯虛擬按鍵訊息
