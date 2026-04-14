@@ -118,7 +118,7 @@
                 result.innerHTML += `列出映像檔：<code>docker image ls</code><br>`;
                 result.innerHTML += `列出執行中的容器：<code>docker ps</code><code>docker container ls</code><br>`;
                 result.innerHTML += `列出所有容器：<code>docker ps -a</code><code>docker container ls -a</code><br>`;
-                result.innerHTML += `進入已經開啟的容器：<code>docker exec -it <容器ID或名稱></code><br>`;
+                result.innerHTML += `進入已經開啟的容器：<code>docker exec -it <容器ID或名稱> /bin/bash</code><br>`;
                 result.innerHTML += `重新啟動已關閉容器：<code>docker start -ai <容器ID或名稱></code><br>`;
                 result.innerHTML += `指定容器名稱、以 GPU 啟動、掛載、port轉址、直接進入bash介面：<br><code>docker run --name <容器名稱> --gpus all -v <主機路徑>:<容器路徑> -p <主機Port>:<容器Port> -it <映像檔名稱> /bin/bash</code><br>`;
                 result.innerHTML += `<hr>`;
