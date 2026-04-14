@@ -61,7 +61,7 @@
         }
 
         th {
-            width: 16%;
+            width: 14%;
         }
     </style>
 </head>
@@ -75,6 +75,7 @@
         <option value="Docker">Docker</option>
         <option value="FFmpeg">FFmpeg</option>
         <option value="7z">7z</option>
+        <option value="Git">Git</option>
     </select>
     <br>
     <table style="width: 100%">
@@ -96,6 +97,9 @@
             </th>
             <th scope="col">
                 <div style="background:#e4e4de"><img width="25" src="./img/7z.png">7z</div>
+            </th>
+            <th scope="col">
+                <div style="background:#f7ede0"><img width="25" src="./img/git.png">Git</div>
             </th>
         </tr>
     </table>
@@ -151,6 +155,21 @@
                 result.innerHTML += `把DCM檔轉為XML檔：<code>dcm2xml input.dcm output.xml</code><br>`;
                 result.innerHTML += `把DCM檔轉為XML檔，且包含像素等龐大資料：<code>dcm2xml +M input.dcm output.xml</code><br>`;
                 result.innerHTML += `把DCM檔轉為XML檔，且轉換成UTF-8(包含中文的情況)：<code>dcm2xml --convert-to-utf8 input.dcm output.xml</code><br>`;
+            } else if (this.value == "Git") {
+                result.innerHTML += `在目前位置建立一個Git倉庫 (Repository，簡稱repo)：<code>git init</code><br>`;
+                result.innerHTML += `從遠端下載目標專案到目前位置：<code>git clone &lt;url&gt;</code><br>`;
+                result.innerHTML += `查看專案目前關聯的遠端位址：<code>git remote -v &lt;url&gt;</code><br>`;
+                result.innerHTML += `將檔案加入「暫存區」：<code>git add &lt;file&gt;</code><br>`;
+                result.innerHTML += `將所有修改過檔案加入「暫存區」：<code>git add .</code><br>`;
+                result.innerHTML += `把「暫存區」的內容提交到倉庫：<code>git commit -m "說明文字"：</code><br>`;
+                result.innerHTML += `查看提交的歷史紀錄：<code>git log</code><br>`;
+                result.innerHTML += `建立新分支：<code>git branch <分支名稱></code><br>`;
+                result.innerHTML += `切換到指定分支：<code>git checkout <分支名稱></code><br>`;
+                result.innerHTML += `將指定分支合併到目前所在的分支：<code>git merge &lt;分支名稱&gt;</code><br>`;
+                result.innerHTML += `建立新的提交「抵銷」之前的某次修改：<code>git revert &lt;commit id&gt;</code><br>`;
+                result.innerHTML += `取消對目標檔案的修改，回復到上次提交時的狀態：<code>git checkout --&lt;file&gt;</code><br>`;
+                result.innerHTML += `<hr>`;
+                result.innerHTML += `<redText>強制退回到某個版本(會刪除未提交的修改)：</redText><code class="redCode">git reset --hard &lt;commit id&gt;</code><br>`;
             }
             // 註冊剪貼簿
             for (const code of document.querySelectorAll("code")) {
