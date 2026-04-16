@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-Hans-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google" content="notranslate">
+    <title>線上文字解碼工具</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            background-color: #ffecef;
+        }
+
+        select {
+            width: 250px;
+            height: 30px;
+            padding: 3px;
+            font-size: 1.2rem;
+        }
+
+        label {
+            line-height: 2;
+            font-size: 14pt;
+        }
+
+        textarea {
+            padding: 10px;
+            width: 90%;
+            max-width: 100%;
+            height: 40%;
+            max-height: 100%;
+            line-height: 1.5;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            box-shadow: 1px 1px 1px #e56e90;
+            font-size: 14pt;
+            font-family: 標楷體;
+        }
+
+        .container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <label>輸入文字：</label>
+        <br>
+        <textarea id="text1">\u5373\u6642\u89e3\u78bc\u591a\u7a2e\u683c\u5f0f\uff0c\u4e0d\u53d7\u5ee3\u544a\u6253\u64fe\uff0c\u4e14\u6c92\u6709\u8cc7\u6599\u4e0a\u50b3\u5230\u4f3a\u670d\u5668\u7684\u7591\u616e (p\u2267\u25bd\u2266)p</textarea>
+        <br>
+        <select id="options" name="options">
+            <option value="URL編碼">URL 編碼</option>
+            <option value="URL解碼">URL 解碼</option>
+            <option value="Base64編碼">Base64 編碼</option>
+            <option value="Base64解碼">Base64 解碼</option>
+            <option value="Unicode解碼" selected>Unicode 解碼</option>
+            <option value="單雙反斜線轉正斜線">單雙反斜線轉正斜線</option>
+        </select>
+        <br>
+        <textarea id="text2"></textarea>
+        <script>
+            var getId = (id) => document.getElementById(id), [text1, text2, options] = [getId("text1"), getId("text2"), getId("options")];
+            window.onload = options.onchange = text1.oninput = function () {
+                text2.value = text1.value;
+                if (options.value == "URL編碼")
+                    text2.value = encodeURIComponent(text1.value);
+                else if (options.value == "URL解碼")
+                    text2.value = decodeURIComponent(text1.value);
+                else if (options.value == "Base64編碼")
+                    text2.value = btoa(text1.value);
+                else if (options.value == "Base64解碼")
+                    text2.value = atob(text1.value);
+                else if (options.value == "Unicode解碼")
+                    text2.value = JSON.parse('"' + text1.value.replaceAll('"', "").replaceAll("\\\\", "\\") + '"');
+                else if (options.value == "單雙反斜線轉正斜線")
+                    text2.value = text1.value.replaceAll("\\\\", "/").replaceAll("\\", "/");
+            }
+        </script>
+    </div>
+</body>
+
+</html>
