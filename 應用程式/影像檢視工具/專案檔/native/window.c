@@ -143,6 +143,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                     // 載入新影像並釋放原影像的記憶體
                     DisposeImage(GlobalImage);
                     GlobalImage = imread(playlist[currentImgIndex]);
+                    mixAlpha2Image(GlobalImage);
                     SetWindowTextW(hwnd, playlist[currentImgIndex]);
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
@@ -153,12 +154,17 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                     // 載入新影像並釋放原影像的記憶體
                     DisposeImage(GlobalImage);
                     GlobalImage = imread(playlist[currentImgIndex]);
+                    mixAlpha2Image(GlobalImage);
                     SetWindowTextW(hwnd, playlist[currentImgIndex]);
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
             }
             // ctrl + C ，若高位元(0x8000)為 1 代表Ctrl正在被按著
-            if (wParam == 'C' && (GetKeyState(VK_CONTROL) & 0x8000)) CopyImageToClipboard(hwnd, GlobalImage);
+            if (wParam == 'C' && (GetKeyState(VK_CONTROL) & 0x8000)){
+                Image* image = imread(playlist[currentImgIndex]);
+                CopyImageToClipboard(hwnd, image);
+                DisposeImage(image);
+            }
             return 0;
         }
         case WM_DESTROY:
@@ -182,6 +188,7 @@ window* createWindow(HINSTANCE hInstance){
     wc.lpfnWndProc = WindowProc;                
     wc.hInstance = hInstance;                   
     wc.lpszClassName = L"imgview"; 
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 
     window* window_ = (window*)malloc(sizeof(window));
     window_->wc=wc;

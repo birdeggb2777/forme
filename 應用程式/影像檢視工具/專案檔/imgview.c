@@ -13,6 +13,25 @@ Image* imread(wcharPtr path){
     return img;
 }
 
+void mixAlpha2Image(Image* img){
+    const int length = img->width * img->height * img->channels, strides = img->width * img->channels;
+    const byte* data = img->data;
+    bool includeAlpha = false;
+    // 偵測的最小單位是100，沒有就當作沒有透明了
+    for(int y = 0; y < img->height; y += 100){
+        for(int x = 0; x < img->width; x += 100){
+            if(img->data[y * strides + x + 3] < 255) includeAlpha = true;
+        }
+    }
+    if(includeAlpha == false) return;
+    
+    // 如果有透明，就做出動作
+    DWORD bgColor = GetSysColor(COLOR_WINDOW);
+    byte bgR = GetRValue(bgColor), bgG = GetGValue(bgColor), bgB = GetBValue(bgColor);
+    for(int i = 0; i < length; i += 4)
+        if(img->data[i + 3] < 255) img->data[i + 0] = bgB,img->data[i + 1] = bgG,img->data[i + 2] = bgR;
+}
+
 // 取得檔案名稱
 wcharPtr getFileName(wcharPtr fullPath){
     
@@ -130,16 +149,16 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, wcharPtr lpCmd
 
     // 載入目標圖片
     GlobalImage = imread(argv[1]);
+    mixAlpha2Image(GlobalImage);
     if(GlobalImage->width == 0) goto Error;
 
     // 建立視窗
     window* window_ = createWindow(hInstance);
-    setWindow(window_,hInstance, argv[1], 500, 300);
+    setWindow(window_,hInstance, argv[1], 1920, 1080);
 
     // 顯示視窗
     ShowWindow(window_->hwnd, SW_MAXIMIZE);
     UpdateWindow(window_->hwnd);
-    SetCursor(LoadCursor(NULL, IDC_ARROW));
 
     // 訊息迴圈
     MSG msg = {0};
