@@ -4,6 +4,7 @@
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "gdi32.lib")
 
+///////////////////
 void drawImage2Window(HDC hdc, HWND hwnd, byte* imgData, int x, int y, int srcWidth, int srcHeight, int dstWidth, int dstHeight){
     BITMAPINFO bmi = { 0 };
     bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -33,6 +34,58 @@ void drawImage2Window(HDC hdc, HWND hwnd, byte* imgData, int x, int y, int srcWi
     );
 }
 
+void CopyImageToClipboard(HWND hwnd, Image* image) {
+
+    const unsigned char* pixels = image->data;
+    int width = image->width, height = image->height;
+
+    if (pixels == NULL || width <= 0 || height <= 0) return;
+
+    // 僅限BGRA
+    int bytesPerPixel = 4;
+    size_t rowBytes = width * bytesPerPixel; 
+    size_t imageSize = rowBytes * height;
+
+    // 剪貼簿需要的 CF_DIB 格式，記憶體結構是：[BITMAPINFOHEADER] + [像素陣列]
+    size_t totalSize = sizeof(BITMAPINFOHEADER) + imageSize;
+
+    // 剪貼簿的記憶體必須用 GlobalAlloc 配合 GMEM_MOVEABLE 配置，不能使用 malloc
+    HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, totalSize);
+    if (hGlobal == NULL) return;
+
+    // 鎖定記憶體以取得指標
+    unsigned char* pMem = (unsigned char*)GlobalLock(hGlobal);
+    if (pMem == NULL) { GlobalFree(hGlobal); return;}
+
+    // 1. 填寫檔案標頭 (BITMAPINFOHEADER)
+    BITMAPINFOHEADER* bmi = (BITMAPINFOHEADER*)pMem;
+    bmi->biSize = sizeof(BITMAPINFOHEADER);
+    bmi->biWidth = width;
+    
+    // Windows 的點陣圖預設是「由下往上 (Bottom-Up)」存的，所以高度是負的
+    bmi->biHeight = -height; 
+    bmi->biPlanes = 1;
+    bmi->biBitCount = 32; // 32 位元色彩
+    bmi->biCompression = BI_RGB;
+    bmi->biSizeImage = (DWORD)imageSize;
+
+    // 複製像素陣列到標頭的正後方
+    unsigned char* dstPixels = pMem + sizeof(BITMAPINFOHEADER);
+    // 複製像素資料
+    memcpy(dstPixels, pixels, imageSize);
+
+    // 解除記憶體鎖定
+    GlobalUnlock(hGlobal);
+
+    // 放入剪貼簿
+    if (OpenClipboard(hwnd)) {
+        EmptyClipboard();
+        SetClipboardData(CF_DIB, hGlobal); // 格式改用 CF_DIB，並傳入剛剛分配的HGLOBAL
+        CloseClipboard();
+    } else  GlobalFree(hGlobal); // 剪貼簿開啟失敗時，回收記憶體，但如果成功，就不可回收，因為剪貼簿已經接管了這塊記憶體
+}
+
+
 // 視窗訊息處理函數 (WindowProc)
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
@@ -41,21 +94,25 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             InvalidateRect(hwnd, NULL, TRUE);
             return 0;
         }
+        case WM_ERASEBKGND:
+            return 1; // 防止閃爍
         case WM_PAINT: {
             RECT windowRect;
             GetClientRect(hwnd, &windowRect);
             PAINTSTRUCT ps;
-
-            //清除整個視窗
-            HDC hdc = BeginPaint(hwnd, &ps);
-            FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
-            
+                        
             //取得視窗長寬
             RECT rect;
             int Window_Width = 1, Window_Height = 1;
-            if (GetClientRect(hwnd, &rect)) {
-                Window_Width = rect.right - rect.left; Window_Height = rect.bottom - rect.top;
-            }
+            if (GetClientRect(hwnd, &rect)) 
+                Window_Width = rect.right - rect.left, Window_Height = rect.bottom - rect.top;
+
+            //清除整個視窗
+            HDC hdc = BeginPaint(hwnd, &ps);
+            HDC memDC = CreateCompatibleDC(hdc); // 建立與螢幕相容的記憶體管線
+            HBITMAP memBitmap = CreateCompatibleBitmap(hdc, Window_Width, Window_Height); // 建立一塊空白畫布
+            SelectObject(memDC, memBitmap); // 把畫布掛上管線
+            FillRect(memDC, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
 
             // 計算縮放比例，採用最小的那一個
             float scaleW = (float)Window_Width / (float)GlobalImage->width;
@@ -68,8 +125,40 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             int x = (Window_Width - dstWidth) / 2;
             int y = (Window_Height - dstHeight) / 2;
             // 畫上去
-            drawImage2Window(hdc, hwnd, GlobalImage->data, x, y, GlobalImage->width, GlobalImage->height, dstWidth, dstHeight);
+            drawImage2Window(memDC, hwnd, GlobalImage->data, x, y, GlobalImage->width, GlobalImage->height, dstWidth, dstHeight);
+            // 將雙緩衝的影像寫回
+            BitBlt(hdc, 0, 0, Window_Width, Window_Height, memDC, 0, 0, SRCCOPY);
+            // 回收記憶體
+            DeleteObject(memBitmap);
+            DeleteDC(memDC);
+            return 0;
+        }
 
+        case WM_KEYDOWN:{
+            switch (wParam)  {
+                case VK_DOWN:
+                case VK_RIGHT:
+                    currentImgIndex -= 1;
+                    if (currentImgIndex < 0) currentImgIndex = playlistCount - 1;
+                    // 載入新影像並釋放原影像的記憶體
+                    DisposeImage(GlobalImage);
+                    GlobalImage = imread(playlist[currentImgIndex]);
+                    SetWindowTextW(hwnd, playlist[currentImgIndex]);
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                case VK_UP:
+                case VK_LEFT:
+                    currentImgIndex += 1;
+                    if (currentImgIndex >= playlistCount) currentImgIndex = 0;
+                    // 載入新影像並釋放原影像的記憶體
+                    DisposeImage(GlobalImage);
+                    GlobalImage = imread(playlist[currentImgIndex]);
+                    SetWindowTextW(hwnd, playlist[currentImgIndex]);
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+            }
+            // ctrl + C ，若高位元(0x8000)為 1 代表Ctrl正在被按著
+            if (wParam == 'C' && (GetKeyState(VK_CONTROL) & 0x8000)) CopyImageToClipboard(hwnd, GlobalImage);
             return 0;
         }
         case WM_DESTROY:

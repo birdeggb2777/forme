@@ -36,3 +36,6 @@ void DisposeImage(Image* self){
 }
 
 Image* GlobalImage = NULL;
+wcharPtr* playlist = NULL;
+int playlistCount = 0;
+int currentImgIndex = 0;
