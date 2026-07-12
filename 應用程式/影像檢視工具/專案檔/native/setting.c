@@ -7,6 +7,7 @@
 #include <time.h> 
 //////////////////////////////////
 #include <shellapi.h> // argv用的
+#pragma comment(lib, "Shell32.lib") // argv用的
 
 #define BOOL int  
 #define TRUE 1  
@@ -19,6 +20,7 @@
 #define False 0
 
 #define wcharPtr wchar_t*
+#define wchar wchar_t
 #define UInt64 DWORD
 
 #define max1(a,b) (((a) > (b)) ? (a) : (b))
@@ -37,6 +39,6 @@ void setup_gui(){
 
 //系統常數、亂數種子
 void setup_sys(){
-    LPWSTR commandLine = GetCommandLineW();
+    // wcharPtr commandLine = GetCommandLineW();
     srand(time(NULL));
 }

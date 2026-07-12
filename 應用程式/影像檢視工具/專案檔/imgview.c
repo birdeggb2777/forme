@@ -8,47 +8,49 @@
 #include "native/gdiplus.c"
 
 Image* imread(string path){
-    Image* img = (Image*) malloc(sizeof(Image) * 1);
+    Image* img = (Image*) calloc(1, sizeof(Image));
     imread_native(path.val, &img->data, &img->width, &img->height, &img->channels);
     img->pixelFormat = BGRA;
     return img;
 }
 
 // 取得檔案名稱
-wcharPtr getFileName(char* fullPath){
+wcharPtr getFileName(wcharPtr fullPath){
     
-    char drive[_MAX_DRIVE]; char dir[_MAX_DIR];
-    char FName[_MAX_FNAME]; char ext[_MAX_EXT];
+    // 寬字元陣列
+    wchar drive[_MAX_DRIVE]; wchar dir[_MAX_DIR];
+    wchar FName[_MAX_FNAME]; wchar ext[_MAX_EXT];
 
     // 進行拆分
-    _splitpath_s(fullPath, drive, _MAX_DRIVE, dir, _MAX_DIR, FName, _MAX_FNAME, ext, _MAX_EXT);
-
+    _wsplitpath_s(fullPath, drive, _MAX_DRIVE, dir, _MAX_DIR, FName, _MAX_FNAME, ext, _MAX_EXT);
+    
     // 取得檔案名稱
-    int file_len = strlen(FName) + strlen(ext) + 1;
-    char fileName[_MAX_FNAME + _MAX_EXT];
-    snprintf(fileName, sizeof(fileName), "%s%s", FName, ext);
-    return char_to_wchar(fileName);
+    int file_len = wcslen(FName) + wcslen(ext) + 1;
+    wcharPtr fileName = (wcharPtr)calloc(file_len, sizeof(wchar));
+    swprintf_s(fileName, file_len, L"%s%s", FName, ext);
+
+    return fileName;
 }
 
 // 程式進入點 (main function)
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, wcharPtr lpCmdLine, int nCmdShow) {
+    // 處理輸入的參數
+    int argc;
+    wcharPtr* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    if (!(argc > 1)) goto Error;
 
-    if (!(__argc > 1)) {MessageBox(NULL, "圖片讀取失敗！原因窩也不知道(╥﹏╥)", "錯誤", MB_ICONERROR);return 0;} 
     setup_console();
     setup_gui();
     setup_sys();
     initGdiPlus();
 
     string imagePath;
-    apply(&imagePath, char_to_wchar(__argv[1]));
+    apply(&imagePath, argv[1]);
     GlobalImage = imread(imagePath); //initImage(1200,1300,4,RGBA);
-    if(GlobalImage->width == 0) {
-        MessageBox(NULL, "圖片讀取失敗！原因窩也不知道(╥﹏╥)", "錯誤", MB_ICONERROR);
-        return 0;
-    }
-
+    if(GlobalImage->width == 0) goto Error;
+    
     string title;
-    apply(&title, getFileName(__argv[1]));
+    apply(&title, getFileName(argv[1]));
 
     // 建立視窗
     window* window_ = createWindow(hInstance);
@@ -68,4 +70,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     closeGdiPlus();
     return (int)msg.wParam;
+
+    Error:
+        MessageBox(NULL, "圖片讀取失敗！原因窩也不知道(╥﹏╥)", "錯誤", MB_ICONERROR);
+        return 1;
 }

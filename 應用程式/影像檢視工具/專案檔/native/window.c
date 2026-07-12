@@ -115,8 +115,6 @@ void setWindow(window* window_, HINSTANCE hInstance, wcharPtr title, int width, 
         hInstance,                    // 程式實體的識別碼
         NULL                          // 其他參數 (這也不需要)
     );
-    if (window_->hwnd == NULL) {
+    if (window_->hwnd == NULL)
         MessageBox(NULL, "視窗建立失敗！原因窩也不知道(╥﹏╥)", "錯誤", MB_ICONERROR);
-        return;
-    }
 }
