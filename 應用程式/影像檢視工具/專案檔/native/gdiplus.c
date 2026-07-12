@@ -45,6 +45,25 @@ GpStatus WINAPI GdipGetImageHeight(GpBitmap* image, UINT* height);
 GpStatus WINAPI GdipBitmapLockBits(GpBitmap* bitmap, const Rect* rect, UINT flags, INT format, BitmapData* lockedBitmapData);
 GpStatus WINAPI GdipBitmapUnlockBits(GpBitmap* bitmap, BitmapData* lockedBitmapData);
 
+// --- 旋轉用 ---
+typedef struct PropertyItem {
+    PROPID  id;
+    ULONG   length;
+    WORD    type;
+    VOID    *value;
+} PropertyItem;
+
+typedef enum RotateFlipType {
+    RotateNoneFlipNone = 0,
+    Rotate90FlipNone   = 1,
+    Rotate180FlipNone  = 2,
+    Rotate270FlipNone  = 3,
+    RotateNoneFlipX    = 4,
+    Rotate90FlipX      = 5,
+    Rotate180FlipX     = 6,
+    Rotate270FlipX     = 7
+} RotateFlipType;
+
 // ========= 手動宣告結束 ========= //
 
 ULONG_PTR gdiplusToken;
@@ -59,6 +78,47 @@ void closeGdiPlus(){
     GdiplusShutdown(gdiplusToken);
 }
 
+void setOrientationWithBitmap(GpBitmap* bitmap) {
+    if (bitmap == NULL) return;
+
+    // PropertyTagOrientation 的標籤 ID
+    const PROPID propId = 0x0112; 
+    UINT size = 0;
+
+    // 取得 EXIF 屬性的大小 (需要轉型成 GpImage*)
+    GpStatus status = GdipGetPropertyItemSize((GpImage*)bitmap, propId, &size);
+    if (status != Ok || size == 0) return;
+
+    // 分配記憶體
+    PropertyItem* propItem = (PropertyItem*)malloc(size);
+    if (propItem == NULL) return;
+
+    // 讀取 EXIF 屬性內容
+    status = GdipGetPropertyItem((GpImage*)bitmap, propId, size, propItem);
+    if (status != Ok) goto exitOrientation;
+
+    short orientation = *((short*)propItem->value);
+    RotateFlipType rotateFlipType = RotateNoneFlipNone;
+
+    switch (orientation) {
+        case 2: rotateFlipType = RotateNoneFlipX;   break;
+        case 3: rotateFlipType = Rotate180FlipNone; break;
+        case 4: rotateFlipType = Rotate180FlipX;    break;
+        case 5: rotateFlipType = Rotate90FlipX;     break;
+        case 6: rotateFlipType = Rotate90FlipNone;  break;
+        case 7: rotateFlipType = Rotate270FlipX;    break;
+        case 8: rotateFlipType = Rotate270FlipNone; break;
+    }
+    
+    if (rotateFlipType == RotateNoneFlipNone)  goto exitOrientation;
+
+    GdipImageRotateFlip((GpImage*)bitmap, rotateFlipType);
+    GdipRemovePropertyItem((GpImage*)bitmap, propId);
+        
+exitOrientation:
+    free(propItem);
+}
+
 void imread_native(wcharPtr path, byte** imgData, int* width_, int* height_, int* chans_) {
     
     GpBitmap* bitmap = NULL;
@@ -66,7 +126,11 @@ void imread_native(wcharPtr path, byte** imgData, int* width_, int* height_, int
     GpStatus status = GdipCreateBitmapFromFile(path, &bitmap);
 
     if (status != Ok || bitmap == NULL) return;
-    
+
+    // 處理旋轉問題
+    setOrientationWithBitmap(bitmap);
+
+    // 處理長寬
     UINT width, height;
     GdipGetImageWidth(bitmap, &width);
     GdipGetImageHeight(bitmap, &height);
