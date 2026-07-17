@@ -117,6 +117,7 @@
             else if (this.value == "FFmpeg") {
                 result.innerHTML += `無失真切割：<code>ffmpeg -i input.mp4 -ss 00:01:00 -to 00:01:30 -c copy output.mp4</code><br>`;
                 result.innerHTML += `提取原始音訊：<code>ffmpeg -i input.mp4 -vn -acodec copy output.m4a</code><br>`;
+                result.innerHTML += `提取指定一幀至影像檔：<code>ffmpeg -ss 00:01:15 -i input.mp4 -vframes 1 output.png</code><br>`;
             }
             else if (this.value == "Docker") {
                 result.innerHTML += `列出映像檔：<code>docker image ls</code><br>`;
@@ -132,6 +133,7 @@
             else if (this.value == "Conda") {
                 result.innerHTML += `列出所有環境：<code>conda env list</code><br>`;
                 result.innerHTML += `啟動指定環境：<code>conda activate envname</code><br>`;
+                result.innerHTML += `複製指定環境：<code>conda create --clone envname -n newname</code><br>`;
                 result.innerHTML += `匯出目前環境：<code>conda env export > env.yml</code><br>`;
                 result.innerHTML += `匯出目前環境且排除系統相依路徑：<code>conda env export --no-builds > env.yml</code><br>`;
                 result.innerHTML += `匯入指定環境：<code>conda env create -f env.yml</code><br>`;
