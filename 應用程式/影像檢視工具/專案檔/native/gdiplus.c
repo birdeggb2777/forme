@@ -79,7 +79,6 @@ void closeGdiPlus(){
 }
 
 void setOrientationWithBitmap(GpBitmap* bitmap) {
-    if (bitmap == NULL) return;
 
     // PropertyTagOrientation 的標籤 ID
     const PROPID propId = 0x0112; 
@@ -90,16 +89,16 @@ void setOrientationWithBitmap(GpBitmap* bitmap) {
     if (status != Ok || size == 0) return;
 
     // 分配記憶體
-    PropertyItem* propItem = (PropertyItem*)malloc(size);
+    PropertyItem* propItem = memory(PropertyItem, size);
     if (propItem == NULL) return;
 
     // 讀取 EXIF 屬性內容
     status = GdipGetPropertyItem((GpImage*)bitmap, propId, size, propItem);
     if (status != Ok) goto exitOrientation;
 
+    // 處理旋轉
     short orientation = *((short*)propItem->value);
     RotateFlipType rotateFlipType = RotateNoneFlipNone;
-
     switch (orientation) {
         case 2: rotateFlipType = RotateNoneFlipX;   break;
         case 3: rotateFlipType = Rotate180FlipNone; break;
@@ -109,43 +108,39 @@ void setOrientationWithBitmap(GpBitmap* bitmap) {
         case 7: rotateFlipType = Rotate270FlipX;    break;
         case 8: rotateFlipType = Rotate270FlipNone; break;
     }
-    
     if (rotateFlipType == RotateNoneFlipNone)  goto exitOrientation;
 
-    GdipImageRotateFlip((GpImage*)bitmap, rotateFlipType);
-    GdipRemovePropertyItem((GpImage*)bitmap, propId);
+    GdipImageRotateFlip((GpImage*)bitmap, rotateFlipType); // 套用旋轉
+    GdipRemovePropertyItem((GpImage*)bitmap, propId);      // 移除旋轉屬性
         
 exitOrientation:
     free(propItem);
 }
 
 void imread_native(wcharPtr path, byte** imgData, int* width_, int* height_, int* chans_) {
-    
-    GpBitmap* bitmap = NULL;
-    BitmapData bitmapData;
-    GpStatus status = GdipCreateBitmapFromFile(path, &bitmap);
 
-    if (status != Ok || bitmap == NULL) return;
+    //宣告
+    GpBitmap* bitmap = NULL; BitmapData bitmapData;
+    // 出錯就返回
+    if (GdipCreateBitmapFromFile(path, &bitmap) != Ok || bitmap == NULL) return;
 
-    // 處理旋轉問題
+    // 處理旋轉
     setOrientationWithBitmap(bitmap);
 
     // 處理長寬
     UINT width, height;
     GdipGetImageWidth(bitmap, &width);
     GdipGetImageHeight(bitmap, &height);
-    Rect rect = {0, 0, width, height};
 
     // 鎖定點陣圖的記憶體區域以供讀取，PixelFormat32bppARGB的順序是A、R、G、B
-    GdipBitmapLockBits(bitmap, &rect, ImageLockModeRead, PixelFormat32bppARGB, &bitmapData);
+    GdipBitmapLockBits(bitmap, &(Rect){0, 0, width, height}, ImageLockModeRead, PixelFormat32bppARGB, &bitmapData);
     
-    // 建立一個緩衝區來複製像素資料
-    int buffer_size = bitmapData.Stride * height;
-    *imgData = (byte*) malloc(sizeof(byte) * buffer_size);
-    memcpy(*imgData, bitmapData.Scan0, buffer_size);
-
+    // 建立一個緩衝區(緩衝區大小為 bitmapData.Stride * height)，並複製像素資料到緩衝區
+    *imgData = memory(byte, bitmapData.Stride * height);
+    memcpy(*imgData, bitmapData.Scan0, (bitmapData.Stride * height));
+    
+    // 長、寬
     *width_ = width; *height_ = height; *chans_ = 4;
-
     // 解除點陣圖記憶體的鎖定
     GdipBitmapUnlockBits(bitmap, &bitmapData);
     // 點陣圖可以釋放了

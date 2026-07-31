@@ -36,7 +36,7 @@ void drawImage2Window(HDC hdc, HWND hwnd, byte* imgData, int x, int y, int srcWi
 
 void CopyImageToClipboard(HWND hwnd, Image* image) {
 
-    const unsigned char* pixels = image->data;
+    const byte* pixels = image->data;
     int width = image->width, height = image->height;
 
     if (pixels == NULL || width <= 0 || height <= 0) return;
@@ -54,7 +54,7 @@ void CopyImageToClipboard(HWND hwnd, Image* image) {
     if (hGlobal == NULL) return;
 
     // 鎖定記憶體以取得指標
-    unsigned char* pMem = (unsigned char*)GlobalLock(hGlobal);
+    byte* pMem = (byte*)GlobalLock(hGlobal);
     if (pMem == NULL) { GlobalFree(hGlobal); return;}
 
     // 1. 填寫檔案標頭 (BITMAPINFOHEADER)
@@ -70,7 +70,7 @@ void CopyImageToClipboard(HWND hwnd, Image* image) {
     bmi->biSizeImage = (DWORD)imageSize;
 
     // 複製像素陣列到標頭的正後方
-    unsigned char* dstPixels = pMem + sizeof(BITMAPINFOHEADER);
+    byte* dstPixels = pMem + sizeof(BITMAPINFOHEADER);
     // 複製像素資料
     memcpy(dstPixels, pixels, imageSize);
 
@@ -84,7 +84,6 @@ void CopyImageToClipboard(HWND hwnd, Image* image) {
         CloseClipboard();
     } else  GlobalFree(hGlobal); // 剪貼簿開啟失敗時，回收記憶體，但如果成功，就不可回收，因為剪貼簿已經接管了這塊記憶體
 }
-
 
 // 視窗訊息處理函數 (WindowProc)
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -139,29 +138,29 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                 case VK_DOWN:
                 case VK_RIGHT:
                     currentImgIndex -= 1;
-                    if (currentImgIndex < 0) currentImgIndex = playlistCount - 1;
+                    if (currentImgIndex < 0) currentImgIndex = filesListCount - 1;
                     // 載入新影像並釋放原影像的記憶體
                     DisposeImage(GlobalImage);
-                    GlobalImage = imread(playlist[currentImgIndex]);
+                    GlobalImage = imread(filesList[currentImgIndex]);
                     mixAlpha2Image(GlobalImage);
-                    SetWindowTextW(hwnd, playlist[currentImgIndex]);
+                    SetWindowTextW(hwnd, filesList[currentImgIndex]);
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 case VK_UP:
                 case VK_LEFT:
                     currentImgIndex += 1;
-                    if (currentImgIndex >= playlistCount) currentImgIndex = 0;
+                    if (currentImgIndex >= filesListCount) currentImgIndex = 0;
                     // 載入新影像並釋放原影像的記憶體
                     DisposeImage(GlobalImage);
-                    GlobalImage = imread(playlist[currentImgIndex]);
+                    GlobalImage = imread(filesList[currentImgIndex]);
                     mixAlpha2Image(GlobalImage);
-                    SetWindowTextW(hwnd, playlist[currentImgIndex]);
+                    SetWindowTextW(hwnd, filesList[currentImgIndex]);
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
             }
             // ctrl + C ，若高位元(0x8000)為 1 代表Ctrl正在被按著
             if (wParam == 'C' && (GetKeyState(VK_CONTROL) & 0x8000)){
-                Image* image = imread(playlist[currentImgIndex]);
+                Image* image = imread(filesList[currentImgIndex]);
                 CopyImageToClipboard(hwnd, image);
                 DisposeImage(image);
             }
@@ -190,7 +189,7 @@ window* createWindow(HINSTANCE hInstance){
     wc.lpszClassName = L"imgview"; 
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 
-    window* window_ = (window*)malloc(sizeof(window));
+    window* window_ = memory(window, 1);
     window_->wc=wc;
 
     if (!RegisterClassExW(&window_->wc)) return 0;

@@ -19,8 +19,8 @@ typedef struct {
 } Histagram;
 
 Image* initImage(int w, int h, int chans, PixelFormat format){
-    Image* img = (Image*) malloc(sizeof(Image) * 1);
-    img->data = (byte*) malloc(sizeof(byte) * w * h * chans);
+    Image* img = memory(Image, 1);
+    img->data = memory(byte, w * h * chans);
     img->width = w;
     img->height = h;
     img->channels = chans;
@@ -36,6 +36,6 @@ void DisposeImage(Image* self){
 }
 
 Image* GlobalImage = NULL;
-wcharPtr* playlist = NULL;
-int playlistCount = 0;
+wcharPtr* filesList = NULL;
+int filesListCount = 0;
 int currentImgIndex = 0;

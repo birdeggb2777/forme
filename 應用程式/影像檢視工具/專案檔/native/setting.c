@@ -26,6 +26,14 @@
 #define max1(a,b) (((a) > (b)) ? (a) : (b))
 #define min1(a,b) (((a) < (b)) ? (a) : (b))
 
+#define memory(type, size) ((type *)malloc(sizeof(type) * (size)))
+
+int argc; wcharPtr* argv;
+int setup_arguments(){
+    argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    return (!(argv != NULL && argc > 1)) ? 1 : 0;
+}
+
 void setup_console() {
     setlocale(LC_ALL, ".UTF8");
     _setmode(_fileno(stdout), _O_U16TEXT);

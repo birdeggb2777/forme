@@ -1,9 +1,6 @@
 ﻿
 #include "native/setting.c"
-
 #include "BASE/image.c"
-#include "BASE/string.c"
-
 #include "native/gdiplus.c"
 
 Image* imread(wcharPtr path){
@@ -18,11 +15,10 @@ void mixAlpha2Image(Image* img){
     const byte* data = img->data;
     bool includeAlpha = false;
     // 偵測的最小單位是100，沒有就當作沒有透明了
-    for(int y = 0; y < img->height; y += 100){
-        for(int x = 0; x < img->width; x += 100){
+    for(int y = 0; y < img->height; y += 100)
+        for(int x = 0; x < img->width; x += 100)
             if(img->data[y * strides + x + 3] < 255) includeAlpha = true;
-        }
-    }
+    
     if(includeAlpha == false) return;
     
     // 如果有透明，就做出動作
@@ -51,7 +47,7 @@ wcharPtr getFileName(wcharPtr fullPath){
 }
 
 // 判斷是否為圖片副檔名 (忽略大小寫)
-int IsImageExtension(const wchar* ext) {
+int IsImageExtension(const wcharPtr ext) {
     if (ext == NULL) return 0;
     return (_wcsicmp(ext, L".jpg") == 0 ||  _wcsicmp(ext, L".jpeg") == 0 ||  _wcsicmp(ext, L".png") == 0 || 
      _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".tif") == 0);
@@ -59,7 +55,7 @@ int IsImageExtension(const wchar* ext) {
 
 // 傳入檔案路徑，回傳圖片路徑字串陣列，並透過 outCount 輸出數量
 // 注意！！！，FindFirstFileW回傳的順序不可信任
-wchar** GetImageFilesInDirectory(const wchar* inputFilePath, int* outCount) {
+wcharPtr* GetImageFilesInDirectory(const wcharPtr inputFilePath, int* outCount) {
     *outCount = 0;
     if (inputFilePath == NULL) return NULL;
 
@@ -68,7 +64,7 @@ wchar** GetImageFilesInDirectory(const wchar* inputFilePath, int* outCount) {
     wcscpy_s(dirPath, MAX_PATH, inputFilePath);
     
     // 尋找最後一個斜線的位置
-    wchar* lastSlash = wcsrchr(dirPath, L'\\');
+    wcharPtr lastSlash = wcsrchr(dirPath, L'\\');
     if (lastSlash == NULL) lastSlash = wcsrchr(dirPath, L'/');
     
     // 將斜線後面的字元截斷，保留斜線 (例如 C:\images\a.jpg -> C:\images\)
@@ -82,7 +78,7 @@ wchar** GetImageFilesInDirectory(const wchar* inputFilePath, int* outCount) {
 
     // 準備動態記憶體來存放結果 (預設先給10個)
     int capacity = 10, count = 0;
-    wchar** fileList = (wchar**)malloc(capacity * sizeof(wchar*));
+    wcharPtr* fileList = memory(wcharPtr, capacity);
     if (fileList == NULL) return NULL;
 
     // 呼叫 Windows API 遍歷檔案
@@ -95,13 +91,13 @@ wchar** GetImageFilesInDirectory(const wchar* inputFilePath, int* outCount) {
         if ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) continue;
             
         // 取得該檔案的副檔名 (找最後一個點)，不是圖片就跳過
-        wchar* ext = wcsrchr(ffd.cFileName, L'.');
+        wcharPtr ext = wcsrchr(ffd.cFileName, L'.');
         if (!IsImageExtension(ext)) continue;
         
         // 如果陣列滿了，就擴充兩倍空間 (realloc)
         if (count >= capacity) {
             capacity *= 2;
-            wchar** temp = (wchar**)realloc(fileList, capacity * sizeof(wchar*));
+            wcharPtr* temp = (wcharPtr*)realloc(fileList, capacity * sizeof(wcharPtr));
             if (temp == NULL) goto error; // 記憶體不足時跳出
             fileList = temp;
         }
@@ -112,7 +108,7 @@ wchar** GetImageFilesInDirectory(const wchar* inputFilePath, int* outCount) {
 
         // 分配獨立記憶體
         size_t len = wcslen(fullPath) + 1;
-        fileList[count] = (wchar*)malloc(len * sizeof(wchar));
+        fileList[count] = memory(wchar, len);
         wcscpy_s(fileList[count], len, fullPath);
 
         count++;
@@ -131,21 +127,18 @@ error:
 
 // 程式進入點 (main function)
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, wcharPtr lpCmdLine, int nCmdShow) {
-    // 處理輸入的參數
-    int argc;
-    wcharPtr* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-    if (!(argv != NULL && argc > 1)) goto Error;
-
-    setup_console();
-    setup_gui();
-    setup_sys();
-    initGdiPlus();
+    
+    if(setup_arguments()) goto Error; // 處理輸入的參數
+    setup_console(); // 編碼
+    setup_gui();     // 避免縮放模糊
+    setup_sys();     // 亂數種子
+    initGdiPlus();   // GDI+
     
     // 載入整個資料夾的影像清單
-    playlistCount = 0;
-    playlist = GetImageFilesInDirectory(argv[1], &playlistCount);
-    for(int i = 0;i < playlistCount; i++)
-        if (wcscmp(argv[1], playlist[i]) == 0) currentImgIndex = i;
+    filesListCount = 0;
+    filesList = GetImageFilesInDirectory(argv[1], &filesListCount);
+    for(int i = 0;i < filesListCount; i++)
+        if (wcscmp(argv[1], filesList[i]) == 0) currentImgIndex = i;
 
     // 載入目標圖片
     GlobalImage = imread(argv[1]);
@@ -172,5 +165,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, wcharPtr lpCmd
 
     Error:
         MessageBox(NULL, "圖片讀取失敗！原因窩也不知道(╥﹏╥)", "錯誤", MB_ICONERROR);
+        closeGdiPlus();
         return 1;
 }
