@@ -3,7 +3,7 @@
 #include <io.h>      // 包含 _setmode
 #include <fcntl.h>   // 包含 _O_U16TEXT
 #include <locale.h>  // 包含 setlocale
-#include <stdint.h> //uint8_t
+#include <stdint.h>  //uint8_t
 #include <time.h> 
 //////////////////////////////////
 #include <shellapi.h> // argv用的
@@ -19,6 +19,9 @@
 #define True 1  
 #define False 0
 
+#define and &&
+#define or  ||
+
 #define wcharPtr wchar_t*
 #define wchar wchar_t
 #define UInt64 DWORD
@@ -27,11 +30,12 @@
 #define min1(a,b) (((a) < (b)) ? (a) : (b))
 
 #define memory(type, size) ((type *)malloc(sizeof(type) * (size)))
+#define fori(count) for(int i = 0; i < (count); i++)
 
 int argc; wcharPtr* argv;
 int setup_arguments(){
     argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-    return (!(argv != NULL && argc > 1)) ? 1 : 0;
+    return (!(argv != NULL and argc > 1)) ? 1 : 0;
 }
 
 void setup_console() {
@@ -49,4 +53,10 @@ void setup_gui(){
 void setup_sys(){
     // wcharPtr commandLine = GetCommandLineW();
     srand(time(NULL));
+}
+
+HINSTANCE ProgramID;
+// 識別碼
+void setup_instance(HINSTANCE hInstance){
+    ProgramID = hInstance;
 }

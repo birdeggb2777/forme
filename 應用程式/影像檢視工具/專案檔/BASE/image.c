@@ -4,7 +4,7 @@ typedef enum {
 }PixelFormat;
 
 typedef struct {
-    byte* data;         // 指向原始記憶體
+    byte* data;
     int width;
     int height;
     int channels;

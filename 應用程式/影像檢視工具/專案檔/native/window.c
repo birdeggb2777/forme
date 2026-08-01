@@ -4,6 +4,8 @@
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "gdi32.lib")
 
+Image* imread(wcharPtr path, bool mixAlpha);
+
 ///////////////////
 void drawImage2Window(HDC hdc, HWND hwnd, byte* imgData, int x, int y, int srcWidth, int srcHeight, int dstWidth, int dstHeight){
     BITMAPINFO bmi = { 0 };
@@ -41,37 +43,30 @@ void CopyImageToClipboard(HWND hwnd, Image* image) {
 
     if (pixels == NULL || width <= 0 || height <= 0) return;
 
-    // 僅限BGRA
-    int bytesPerPixel = 4;
-    size_t rowBytes = width * bytesPerPixel; 
-    size_t imageSize = rowBytes * height;
+    // 僅限BGRA(bytesPerPixel=4)
+    size_t rowBytes = width * 4, imageSize = rowBytes * height;
 
     // 剪貼簿需要的 CF_DIB 格式，記憶體結構是：[BITMAPINFOHEADER] + [像素陣列]
-    size_t totalSize = sizeof(BITMAPINFOHEADER) + imageSize;
-
     // 剪貼簿的記憶體必須用 GlobalAlloc 配合 GMEM_MOVEABLE 配置，不能使用 malloc
-    HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, totalSize);
+    HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, sizeof(BITMAPINFOHEADER) + imageSize);
     if (hGlobal == NULL) return;
 
     // 鎖定記憶體以取得指標
     byte* pMem = (byte*)GlobalLock(hGlobal);
-    if (pMem == NULL) { GlobalFree(hGlobal); return;}
+    if (pMem == NULL) goto Error;
 
     // 1. 填寫檔案標頭 (BITMAPINFOHEADER)
     BITMAPINFOHEADER* bmi = (BITMAPINFOHEADER*)pMem;
     bmi->biSize = sizeof(BITMAPINFOHEADER);
     bmi->biWidth = width;
-    
-    // Windows 的點陣圖預設是「由下往上 (Bottom-Up)」存的，所以高度是負的
-    bmi->biHeight = -height; 
+    bmi->biHeight = -height; // Windows 的點陣圖預設是「由下往上 (Bottom-Up)」存的，所以高度是負的
     bmi->biPlanes = 1;
     bmi->biBitCount = 32; // 32 位元色彩
     bmi->biCompression = BI_RGB;
     bmi->biSizeImage = (DWORD)imageSize;
 
-    // 複製像素陣列到標頭的正後方
+    // 複製像素資料到標頭的正後方
     byte* dstPixels = pMem + sizeof(BITMAPINFOHEADER);
-    // 複製像素資料
     memcpy(dstPixels, pixels, imageSize);
 
     // 解除記憶體鎖定
@@ -82,22 +77,25 @@ void CopyImageToClipboard(HWND hwnd, Image* image) {
         EmptyClipboard();
         SetClipboardData(CF_DIB, hGlobal); // 格式改用 CF_DIB，並傳入剛剛分配的HGLOBAL
         CloseClipboard();
-    } else  GlobalFree(hGlobal); // 剪貼簿開啟失敗時，回收記憶體，但如果成功，就不可回收，因為剪貼簿已經接管了這塊記憶體
+        return;
+    } 
+Error:
+    GlobalFree(hGlobal); // 剪貼簿開啟失敗時，回收記憶體，但如果成功，就不可回收，因為剪貼簿已經接管了這塊記憶體
 }
 
 // 視窗訊息處理函數 (WindowProc)
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
-        case WM_SIZE: {
+
+        case WM_SIZE:
             // 當視窗大小改變時，強制重繪整個視窗 (設為TRUE，代表有先清除影像)
             InvalidateRect(hwnd, NULL, TRUE);
             return 0;
-        }
+
         case WM_ERASEBKGND:
             return 1; // 防止閃爍
-        case WM_PAINT: {
-            RECT windowRect;
-            GetClientRect(hwnd, &windowRect);
+
+        case WM_PAINT: 
             PAINTSTRUCT ps;
                         
             //取得視窗長寬
@@ -106,7 +104,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             if (GetClientRect(hwnd, &rect)) 
                 Window_Width = rect.right - rect.left, Window_Height = rect.bottom - rect.top;
 
-            //清除整個視窗
+            // 清除整個視窗
             HDC hdc = BeginPaint(hwnd, &ps);
             HDC memDC = CreateCompatibleDC(hdc); // 建立與螢幕相容的記憶體管線
             HBITMAP memBitmap = CreateCompatibleBitmap(hdc, Window_Width, Window_Height); // 建立一塊空白畫布
@@ -131,9 +129,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             DeleteObject(memBitmap);
             DeleteDC(memDC);
             return 0;
-        }
 
-        case WM_KEYDOWN:{
+        case WM_KEYDOWN:
             switch (wParam)  {
                 case VK_DOWN:
                 case VK_RIGHT:
@@ -141,8 +138,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                     if (currentImgIndex < 0) currentImgIndex = filesListCount - 1;
                     // 載入新影像並釋放原影像的記憶體
                     DisposeImage(GlobalImage);
-                    GlobalImage = imread(filesList[currentImgIndex]);
-                    mixAlpha2Image(GlobalImage);
+                    GlobalImage = imread(filesList[currentImgIndex], true);
                     SetWindowTextW(hwnd, filesList[currentImgIndex]);
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
@@ -152,20 +148,19 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                     if (currentImgIndex >= filesListCount) currentImgIndex = 0;
                     // 載入新影像並釋放原影像的記憶體
                     DisposeImage(GlobalImage);
-                    GlobalImage = imread(filesList[currentImgIndex]);
-                    mixAlpha2Image(GlobalImage);
+                    GlobalImage = imread(filesList[currentImgIndex], true);
                     SetWindowTextW(hwnd, filesList[currentImgIndex]);
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
             }
             // ctrl + C ，若高位元(0x8000)為 1 代表Ctrl正在被按著
-            if (wParam == 'C' && (GetKeyState(VK_CONTROL) & 0x8000)){
-                Image* image = imread(filesList[currentImgIndex]);
+            if (wParam == 'C' and (GetKeyState(VK_CONTROL) & 0x8000)){
+                Image* image = imread(filesList[currentImgIndex], false);
                 CopyImageToClipboard(hwnd, image);
                 DisposeImage(image);
             }
             return 0;
-        }
+            
         case WM_DESTROY:
             PostQuitMessage(0);
             return 0;
@@ -177,26 +172,24 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 typedef struct{
    WNDCLASSEXW wc;
    HWND hwnd;
-} window;
+} Window;
 
-window* createWindow(HINSTANCE hInstance){
+Window* createWindow(){
     // 註冊視窗
     WNDCLASSEXW wc = {0};
     wc.cbSize = sizeof(WNDCLASSEXW);      
     wc.hbrBackground = NULL; // (HBRUSH)(COLOR_WINDOW + 1); // 系統預設的視窗顏色
     wc.lpfnWndProc = WindowProc;                
-    wc.hInstance = hInstance;                   
+    wc.hInstance = ProgramID;                   
     wc.lpszClassName = L"imgview"; 
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 
-    window* window_ = memory(window, 1);
-    window_->wc=wc;
-
-    if (!RegisterClassExW(&window_->wc)) return 0;
-    return window_;
+    Window* window = memory(Window, 1);
+    window->wc=wc;
+    return RegisterClassExW(&window->wc) ? window : 0;
 }
 
-void setWindow(window* window_, HINSTANCE hInstance, wcharPtr title, int width, int height){
+void setWindow(Window* window_, wcharPtr title, int width, int height){
     // 建立視窗
     window_->hwnd = CreateWindowExW(
         1,                            // 設定為沒有icon的視窗
@@ -207,9 +200,8 @@ void setWindow(window* window_, HINSTANCE hInstance, wcharPtr title, int width, 
         width, height,                // 只有長寬、沒有高
         NULL,                         // 父視窗 (不需要)
         NULL,                         // 功能表 (不需要)
-        hInstance,                    // 程式實體的識別碼
+        ProgramID,                    // 程式實體的識別碼
         NULL                          // 其他參數 (這也不需要)
     );
-    if (window_->hwnd == NULL)
-        MessageBox(NULL, "視窗建立失敗！原因窩也不知道(╥﹏╥)", "錯誤", MB_ICONERROR);
+    if (window_->hwnd == NULL) MessageBox(NULL, "視窗建立失敗！原因窩也不知道(╥﹏╥)", "錯誤", MB_ICONERROR);
 }

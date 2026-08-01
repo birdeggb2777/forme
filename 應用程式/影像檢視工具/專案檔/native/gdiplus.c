@@ -85,16 +85,14 @@ void setOrientationWithBitmap(GpBitmap* bitmap) {
     UINT size = 0;
 
     // 取得 EXIF 屬性的大小 (需要轉型成 GpImage*)
-    GpStatus status = GdipGetPropertyItemSize((GpImage*)bitmap, propId, &size);
-    if (status != Ok || size == 0) return;
+    if(GdipGetPropertyItemSize((GpImage*)bitmap, propId, &size) != Ok || size == 0) return;
 
     // 分配記憶體
     PropertyItem* propItem = memory(PropertyItem, size);
     if (propItem == NULL) return;
 
     // 讀取 EXIF 屬性內容
-    status = GdipGetPropertyItem((GpImage*)bitmap, propId, size, propItem);
-    if (status != Ok) goto exitOrientation;
+    if(GdipGetPropertyItem((GpImage*)bitmap, propId, size, propItem) != Ok) goto exitOrientation;
 
     // 處理旋轉
     short orientation = *((short*)propItem->value);
@@ -118,6 +116,8 @@ exitOrientation:
 }
 
 void imread_native(wcharPtr path, byte** imgData, int* width_, int* height_, int* chans_) {
+    // 初始化GDI+
+    if(!gdiplusToken) initGdiPlus();
 
     //宣告
     GpBitmap* bitmap = NULL; BitmapData bitmapData;
