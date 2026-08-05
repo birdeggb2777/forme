@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-TW" translate="no">
+<head>
+  <meta charset="UTF-8">
+  <title>檔案比對程式</title>
+  <style>
+    body {
+      align-items: center;
+      background-color: #ffddee;
+    }
+    #DIV1,
+    #DIV2 {
+      width: 400px;
+      height: 200px;
+      min-width: 20%;
+      min-height: 10%;
+      border: 3px dashed #e77ac4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: #e896e2;
+      background-color: #fff;
+    }
+    #DIV1.dragover,
+    #DIV2.dragover {
+      border-color: #000000;
+      background-color: #eda3d8;
+      color: #ffffff;
+    }
+    #result {
+      padding-left: 200px;
+      margin-top: 24px;
+      font-size: 24px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div style="display: flex;gap: 20px;width:100%;height: 100%;">
+    <div id="DIV1">把「檔案一」拖曳到這裡</div>
+    <div id="DIV2">把「檔案二」拖曳到這裡</div>
+  </div>
+  <div id="result"></div>
+  
+  <script>
+    const DIV1 = document.getElementById('DIV1'), DIV2 = document.getElementById('DIV2'), result = document.getElementById('result');
+    // 取消瀏覽器預設的拖曳動作（避免拖曳時直接打開檔案）
+    for (var event_name of ['dragenter', 'dragover', 'dragleave', 'drop']) {
+      DIV1.addEventListener(event_name, preventDefaults, false);
+      DIV2.addEventListener(event_name, preventDefaults, false);
+      document.body.addEventListener(event_name, preventDefaults, false);
+    }
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    for (var event_name of ['dragenter', 'dragover']) {
+      DIV1.addEventListener(event_name, () => DIV1.classList.add('dragover'), false);
+      DIV2.addEventListener(event_name, () => DIV2.classList.add('dragover'), false);
+    }
+    for (var event_name of ['dragleave', 'drop']) {
+      DIV1.addEventListener(event_name, () => DIV1.classList.remove('dragover'), false);
+      DIV2.addEventListener(event_name, () => DIV2.classList.remove('dragover'), false);
+    }
+    function compareFile() {
+      function compareFilesByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByte(file1, file2, progressElement) {
+        if (file1.size !== file2.size) return false;
+        if (file1.size === 0) return true;
+        let chunkSize = 1024 * 1024, offset = 0;// 分區塊，一次1 MB
+        while (offset < file1.size) {
+          const slice1 = file1.slice(offset, offset + chunkSize), slice2 = file2.slice(offset, offset + chunkSize);
+          const buffer1 = slice1.arrayBuffer(), buffer2 = slice2.arrayBuffer();
+          const view1 = new Uint8Array(buffer1), view2 = new Uint8Array(buffer2);
+          for (var i = 0; i < view1.length; i++)
+            if (view1[i] !== view2[i]) return false; // 一個Byte不一樣，就是不同
+          offset += chunkSize;
+        }
+        return true; // 完全相同
+      }
+      if (!(DIV1.file && DIV2.file)) return;
+      const isIdentical = compareFilesByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByteByByte(DIV1.file, DIV2.file);
+      result.textContent = isIdentical ? "(p≧▽≦)p 兩個檔案完全相同！" : "(╥﹏╥) 兩個檔案不完全相同！";
+    }
+    DIV1.ondrop = DIV2.ondrop = function (e) {
+      if (e.dataTransfer.files.length !== 1) return alert("只能拖曳一個檔案");
+      const files = e.dataTransfer.files;
+      this.file = files[0];
+      compareFile();
+    }
+  </script>
+</body>
+</html>
