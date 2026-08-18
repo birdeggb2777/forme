@@ -13,7 +13,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, wcharPtr lpCmd
     setup_instance(hInstance);        // 識別碼
     setup_gui();                      // 避免縮放模糊
     setup_sys();                      // 亂數種子
-    
+    fix_slashes(argv[1]);             // 反斜線轉正斜線
+
     // 載入整個資料夾的影像清單，並將index指向影像清單的位置
     filesList = GetImageFilesInDirectory(argv[1], &filesListCount);
     fori(filesListCount) if (wcscmp(argv[1], filesList[i]) == 0) currentImgIndex = i;
